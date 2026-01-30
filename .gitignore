@@ -1,0 +1,17 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# macOS Finder
+.Spotlight-V100
+.Trashes
+
+# macOS resource forks
+*.swp
+*~
+
+# Output directories (user data)
+stl_files/
+step_files/
