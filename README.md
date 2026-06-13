@@ -1,17 +1,26 @@
-# STL to STEP Converter
+# Mesh to STEP Converter
 
-Convert mesh STL files to solid body STEP files using FreeCAD’s CLI.
+Convert mesh files (STL, 3MF, OBJ, PLY, OFF) to solid body STEP files using FreeCAD’s CLI.
 
 ## Usage
 
-1. Place your `.stl` files in the `stl_files/` directory
+1. Place your mesh files in the `input/` directory
 2. Run the converter:
    ```bash
    ./run_converter.sh
    ```
-3. Find your converted `.step` files in the `step_files/` directory
+3. Find your converted `.step` files in the `output/` directory
 
-**Note:** Successfully converted STL files are automatically deleted after conversion.
+**Note:** Source mesh files are automatically deleted after a fully successful conversion (a file is kept if any object in it fails).
+
+## Supported Formats
+
+`.stl`, `.3mf`, `.obj`, `.ply`, `.off` — any mesh format FreeCAD’s `Mesh` module can import.
+
+A single file may contain more than one body (common with 3MF). FreeCAD merges all parts into one mesh on import, so the converter splits that mesh into its disconnected components and writes each as a **separate STEP file**:
+
+- Single-body file → `name.step`
+- Multi-body file → `name_01.step`, `name_02.step`, … (one per body)
 
 ## Requirements
 
@@ -24,10 +33,10 @@ Convert mesh STL files to solid body STEP files using FreeCAD’s CLI.
 
 ```
 mesh2solid/
-├── stl_files/              # Input: Place STL files here
-├── step_files/             # Output: Converted STEP files
-├── convert_stl_to_step.py  # Main conversion script
-├── run_converter.sh        # Runner script
+├── input/                   # Input: Place mesh files here
+├── output/                  # Output: Converted STEP files
+├── convert_mesh_to_step.py  # Main conversion script
+├── run_converter.sh         # Runner script
 └── README.md
 ```
 
@@ -38,18 +47,21 @@ mesh2solid/
 ## How It Works
 
 The script uses FreeCAD's bundled Python interpreter to:
-1. Load each STL mesh file
-2. Convert the mesh geometry to a solid shape
-3. Export the solid as a STEP file
-4. Delete the original STL file upon successful conversion
+1. Load each mesh file
+2. Split the imported mesh into its disconnected bodies
+3. Convert each body's mesh geometry to a solid shape
+4. Export each solid as its own STEP file
+5. Delete the original mesh file once every body converts successfully
 
 ## Conversion Process
 
-1. Load STL with `Mesh.insert()`
-2. Convert to shape with `shape.makeShapeFromMesh()`
-3. Clean geometry with `shape.removeSplitter()`
-4. Create solid with `Part.Solid()`
-5. Export with `solid.exportStep()`
+1. Load mesh with `Mesh.insert()`
+2. Split into bodies with `mesh.getSeparateComponents()`
+3. For each body:
+   1. Convert to shape with `shape.makeShapeFromMesh()`
+   2. Clean geometry with `shape.removeSplitter()`
+   3. Create solid with `Part.Solid()`
+   4. Export with `solid.exportStep()`
 
 ## Troubleshooting
 
@@ -64,7 +76,7 @@ If you get a "FreeCAD not found" error:
 - Linux: `/usr/lib/freecad/bin/python`, `/opt/freecad/bin/python`
 
 ### Conversion fails for a file
-Some complex or malformed STL files may fail to convert. The script will:
+Some complex or malformed mesh files may fail to convert. The script will:
 - Report the error
 - Continue processing other files
-- Keep the original STL file (only deleted on success)
+- Keep the original mesh file (only deleted on full success)

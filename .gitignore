@@ -12,6 +12,6 @@
 *.swp
 *~
 
-# Output directories (user data)
-stl_files/
-step_files/
+# Input/output directories (user data)
+input/
+output/

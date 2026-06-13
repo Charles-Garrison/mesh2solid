@@ -1,12 +1,12 @@
 #!/bin/bash
 #
-# STL to STEP Converter Runner Script
+# Mesh to STEP Converter Runner Script
 # This script finds FreeCAD's Python and runs the conversion script with it.
 #
 
 # Get the directory where this script is located
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CONVERTER_SCRIPT="$SCRIPT_DIR/convert_stl_to_step.py"
+CONVERTER_SCRIPT="$SCRIPT_DIR/convert_mesh_to_step.py"
 
 # macOS FreeCAD paths
 FREECAD_APP="/Applications/FreeCAD.app"
