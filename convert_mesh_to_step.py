@@ -11,12 +11,13 @@ FreeCAD merges all parts into one mesh on import). The merged mesh is split
 into its disconnected components and each component is converted to its own
 solid and written as a separate STEP file.
 
-Pass --decimate [FACETS] to simplify each body before conversion (much faster
-and far smaller output, at the cost of geometric fidelity).
+By default each body is simplified before conversion (much faster and far
+smaller output, at a small cost in geometric fidelity). Pass --full-resolution
+to keep full mesh detail, or --facets N to choose the simplification target.
 
 Usage:
     Run via FreeCAD's Python interpreter:
-    freecadcmd convert_mesh_to_step.py [--decimate [FACETS]]
+    freecadcmd convert_mesh_to_step.py [--full-resolution | --facets N]
 
     Or on macOS:
     /Applications/FreeCAD.app/Contents/Resources/bin/freecadcmd convert_mesh_to_step.py
@@ -38,9 +39,9 @@ SUPPORTED_EXTENSIONS = (".stl", ".3mf", ".obj", ".ply", ".off")
 # Lower values = higher quality but slower processing.
 SHAPE_TOLERANCE = 0.1
 
-# Default target facet count per body when --decimate is passed without a
-# value. Decimation trades geometric fidelity for much faster conversion and
-# far smaller STEP files (each mesh triangle becomes one STEP face).
+# Default target facet count per body when simplifying (the default behavior).
+# Simplification trades a little geometric fidelity for much faster conversion
+# and far smaller STEP files (each mesh triangle becomes one STEP face).
 DEFAULT_DECIMATE_FACETS = 20000
 
 def setup_directories():
@@ -167,34 +168,40 @@ def parse_args(argv):
     """Parse command-line arguments."""
     parser = argparse.ArgumentParser(
         description="Convert mesh files (STL, 3MF, OBJ, PLY, OFF) to solid "
-                    "STEP files."
+                    "STEP files. Meshes are simplified before conversion by "
+                    "default; use --full-resolution to keep full detail."
     )
-    parser.add_argument(
-        "--decimate",
-        nargs="?",
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument(
+        "--full-resolution", "--full",
+        dest="full_resolution",
+        action="store_true",
+        help="Keep full mesh detail (no simplification). Produces exact but "
+             "very large STEP files and is much slower.",
+    )
+    group.add_argument(
+        "--facets",
         type=int,
-        const=DEFAULT_DECIMATE_FACETS,
-        default=None,
-        metavar="FACETS",
-        help="Simplify each body to at most FACETS triangles before "
-             f"conversion (default {DEFAULT_DECIMATE_FACETS} when given with "
-             "no value). Much faster and far smaller output, at the cost of "
-             "geometric fidelity.",
+        default=DEFAULT_DECIMATE_FACETS,
+        metavar="N",
+        help=f"Target facet count per body when simplifying "
+             f"(default {DEFAULT_DECIMATE_FACETS}). Lower means smaller and "
+             "faster output with less geometric detail.",
     )
     return parser.parse_args(argv)
 
 def main(argv=None):
     """Main function to process all mesh files."""
     args = parse_args(sys.argv[1:] if argv is None else argv)
-    decimate_target = args.decimate
+    decimate_target = None if args.full_resolution else args.facets
 
     print("=" * 60)
     print("Mesh to STEP Converter")
     print("=" * 60)
     if decimate_target:
-        print(f"Decimation: ON (target {decimate_target} facets per body)")
+        print(f"Mode: simplified ({decimate_target} facets per body)")
     else:
-        print("Decimation: OFF (full fidelity)")
+        print("Mode: full resolution")
 
     # Ensure directories exist
     setup_directories()

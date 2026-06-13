@@ -32,7 +32,7 @@ run_macos() {
     export DYLD_LIBRARY_PATH="$LIB:$DYLD_LIBRARY_PATH"
     export DYLD_FRAMEWORK_PATH="$RESOURCES/Frameworks:$DYLD_FRAMEWORK_PATH"
 
-    # Run the converter (forwarding any extra args, e.g. --decimate)
+    # Run the converter (forwarding any extra args, e.g. --full-resolution)
     "$BIN/python" "$CONVERTER_SCRIPT" "$@"
     return 0
 }
