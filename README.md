@@ -13,6 +13,17 @@ Convert mesh files (STL, 3MF, OBJ, PLY, OFF) to solid body STEP files using Free
 
 **Note:** Source mesh files are automatically deleted after a fully successful conversion (a file is kept if any object in it fails).
 
+### Reducing size and conversion time (optional)
+
+The conversion produces a *faceted* solid — one STEP face per mesh triangle — so a dense mesh becomes a very large STEP file and can take a long time to convert. Pass `--decimate` to simplify each body before conversion:
+
+```bash
+./run_converter.sh --decimate         # simplify each body to ~20,000 facets
+./run_converter.sh --decimate 5000    # more aggressive: ~5,000 facets per body
+```
+
+This is dramatically faster and produces much smaller files, at the cost of approximating the geometry (good for printing/visualization, not for exact metrology). Without the flag, conversion is full-fidelity.
+
 ## Supported Formats
 
 `.stl`, `.3mf`, `.obj`, `.ply`, `.off` — any mesh format FreeCAD’s `Mesh` module can import.

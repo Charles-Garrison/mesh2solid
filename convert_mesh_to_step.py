@@ -11,14 +11,18 @@ FreeCAD merges all parts into one mesh on import). The merged mesh is split
 into its disconnected components and each component is converted to its own
 solid and written as a separate STEP file.
 
+Pass --decimate [FACETS] to simplify each body before conversion (much faster
+and far smaller output, at the cost of geometric fidelity).
+
 Usage:
     Run via FreeCAD's Python interpreter:
-    freecadcmd convert_mesh_to_step.py
+    freecadcmd convert_mesh_to_step.py [--decimate [FACETS]]
 
     Or on macOS:
     /Applications/FreeCAD.app/Contents/Resources/bin/freecadcmd convert_mesh_to_step.py
 """
 
+import argparse
 import sys
 import os
 
@@ -33,6 +37,11 @@ SUPPORTED_EXTENSIONS = (".stl", ".3mf", ".obj", ".ply", ".off")
 # Tolerance for mesh -> shape conversion.
 # Lower values = higher quality but slower processing.
 SHAPE_TOLERANCE = 0.1
+
+# Default target facet count per body when --decimate is passed without a
+# value. Decimation trades geometric fidelity for much faster conversion and
+# far smaller STEP files (each mesh triangle becomes one STEP face).
+DEFAULT_DECIMATE_FACETS = 20000
 
 def setup_directories():
     """Ensure input and output directories exist."""
@@ -81,7 +90,7 @@ def get_bodies(doc):
             bodies.extend(obj.Mesh.getSeparateComponents())
     return bodies
 
-def convert_mesh_file(filename):
+def convert_mesh_file(filename, decimate_target=None):
     """
     Convert a single mesh file to one or more STEP files.
 
@@ -91,6 +100,8 @@ def convert_mesh_file(filename):
 
     Args:
         filename: Name of the mesh file (not full path)
+        decimate_target: If set, simplify each body to at most this many
+            facets before conversion.
 
     Returns:
         True if every body converted successfully, False otherwise.
@@ -130,6 +141,11 @@ def convert_mesh_file(filename):
             step_path = os.path.join(OUTPUT_DIR, f"{out_name}.step")
 
             try:
+                if decimate_target and body.CountFacets > decimate_target:
+                    before = body.CountFacets
+                    body.decimate(decimate_target)
+                    print(f"  Decimated body {index}: "
+                          f"{before} -> {body.CountFacets} facets")
                 solid = mesh_to_solid(body)
                 solid.exportStep(step_path)
                 print(f"  -> Created: {out_name}.step")
@@ -147,11 +163,38 @@ def convert_mesh_file(filename):
     finally:
         FreeCAD.closeDocument(doc.Name)
 
-def main():
+def parse_args(argv):
+    """Parse command-line arguments."""
+    parser = argparse.ArgumentParser(
+        description="Convert mesh files (STL, 3MF, OBJ, PLY, OFF) to solid "
+                    "STEP files."
+    )
+    parser.add_argument(
+        "--decimate",
+        nargs="?",
+        type=int,
+        const=DEFAULT_DECIMATE_FACETS,
+        default=None,
+        metavar="FACETS",
+        help="Simplify each body to at most FACETS triangles before "
+             f"conversion (default {DEFAULT_DECIMATE_FACETS} when given with "
+             "no value). Much faster and far smaller output, at the cost of "
+             "geometric fidelity.",
+    )
+    return parser.parse_args(argv)
+
+def main(argv=None):
     """Main function to process all mesh files."""
+    args = parse_args(sys.argv[1:] if argv is None else argv)
+    decimate_target = args.decimate
+
     print("=" * 60)
     print("Mesh to STEP Converter")
     print("=" * 60)
+    if decimate_target:
+        print(f"Decimation: ON (target {decimate_target} facets per body)")
+    else:
+        print("Decimation: OFF (full fidelity)")
 
     # Ensure directories exist
     setup_directories()
@@ -177,7 +220,7 @@ def main():
     files_to_remove = []
 
     for mesh_file in mesh_files:
-        if convert_mesh_file(mesh_file):
+        if convert_mesh_file(mesh_file, decimate_target):
             successful += 1
             files_to_remove.append(mesh_file)
         else:

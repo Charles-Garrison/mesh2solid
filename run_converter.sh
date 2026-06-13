@@ -15,6 +15,7 @@ FREECAD_APP_ALT="$HOME/Applications/FreeCAD.app"
 # Function to setup and run with FreeCAD on macOS
 run_macos() {
     local APP_PATH="$1"
+    shift  # remaining args are forwarded to the converter script
     local RESOURCES="$APP_PATH/Contents/Resources"
     local BIN="$RESOURCES/bin"
     local LIB="$RESOURCES/lib"
@@ -31,8 +32,8 @@ run_macos() {
     export DYLD_LIBRARY_PATH="$LIB:$DYLD_LIBRARY_PATH"
     export DYLD_FRAMEWORK_PATH="$RESOURCES/Frameworks:$DYLD_FRAMEWORK_PATH"
 
-    # Run the converter
-    "$BIN/python" "$CONVERTER_SCRIPT"
+    # Run the converter (forwarding any extra args, e.g. --decimate)
+    "$BIN/python" "$CONVERTER_SCRIPT" "$@"
     return 0
 }
 
@@ -52,7 +53,7 @@ run_linux() {
             echo ""
             export PYTHONPATH="$base/lib:$PYTHONPATH"
             export LD_LIBRARY_PATH="$base/lib:$LD_LIBRARY_PATH"
-            "$base/bin/python" "$CONVERTER_SCRIPT"
+            "$base/bin/python" "$CONVERTER_SCRIPT" "$@"
             return 0
         fi
     done
@@ -66,14 +67,14 @@ echo "Looking for FreeCAD..."
 # Detect OS and run appropriate function
 case "$(uname -s)" in
     Darwin)
-        if run_macos "$FREECAD_APP"; then
+        if run_macos "$FREECAD_APP" "$@"; then
             exit 0
-        elif run_macos "$FREECAD_APP_ALT"; then
+        elif run_macos "$FREECAD_APP_ALT" "$@"; then
             exit 0
         fi
         ;;
     Linux)
-        if run_linux; then
+        if run_linux "$@"; then
             exit 0
         fi
         ;;
